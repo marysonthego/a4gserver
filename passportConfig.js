@@ -3,11 +3,9 @@ const { pool } = require("./dbConfig");
 const bcrypt = require("bcrypt");
 
 function initialize(passport) {
-
-console.log(`initialize passport `, passport);
+  console.log(`initialize passport `, passport);
 
   function authenticateUser(email, password, done) {
-
     console.log(`authenticateUser `, email);
 
     pool.query(
@@ -31,7 +29,9 @@ console.log(`initialize passport `, passport);
             if (isMatch) {
               return done(null, user);
             } else {
-              return done(null, false, { message: "Incorrect Email or Password" });
+              return done(null, false, {
+                message: "Incorrect Email or Password",
+              });
             }
           });
         } else {
@@ -45,22 +45,23 @@ console.log(`initialize passport `, passport);
     new LocalStrategy(
       {
         usernameField: "email",
-        passwordField: "password"
+        passwordField: "password",
       },
       authenticateUser
     )
   );
-//}
 
-passport.serializeUser((user, done) => {done(null, user.id)});
-
-passport.deserializeUser((id, done) => {
-  pool.query(`SELECT * from customer WHERE id = $1`, [id], (err, results) => {
-    if (err) {
-      throw err;
-    }
-    return done(null, results.rows[0]);
+  passport.serializeUser((user, done) => {
+    done(null, user.id);
   });
-});
+
+  passport.deserializeUser((id, done) => {
+    pool.query(`SELECT * from customer WHERE id = $1`, [id], (err, results) => {
+      if (err) {
+        throw err;
+      }
+      return done(null, results.rows[0]);
+    });
+  });
 }
 module.exports = initialize;
