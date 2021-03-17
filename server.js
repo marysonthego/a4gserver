@@ -1,8 +1,7 @@
 require("dotenv").config();
 const express = require("express");
-
 const server = express();
-
+//const bodyparser = require("body-parser");
 const { pool } = require("./dbConfig.js");
 const bcrypt = require("bcrypt");
 const session = require("express-session");
@@ -14,6 +13,7 @@ const PORT = process.env.PORT || 4000;
 
 server.set("view engine", "ejs");
 server.use(express.urlencoded({ extended: false }));
+server.use(express.json());
 
 server.use(
   session({
@@ -71,10 +71,13 @@ server.post("/register", async (req, res) => {
     county,
     password,
   } = req.body;
+  // console.log(`req=`, req);
+  console.log(`req.body= `, req.body);
+  console.log({firstName, lastName, email, cell, addr1, addr2, city, st, zip, county, password});
 
-  if (errors.length > 0) {
-    res.render("register", { errors });
-  } else {
+  //if (err.length > 0) {
+  //  res.render("register", { err });
+  //} else {
     let hashedPassword = await bcrypt.hash(password, 10);
     pool.query(
       `SELECT * FROM Customer
@@ -82,13 +85,14 @@ server.post("/register", async (req, res) => {
       [email],
       (err, results) => {
         if (err) {
+          console.log(`select email error: `, err);
           throw err;
         }
-        console.log(results.rows);
+        console.log(`results: `, results);
 
-        if (results.rows.length > 0) {
-          errors.push({ message: "Email is already in use" });
-          res.render("register", { errors });
+        if (results.length > 0) {
+          err.push({ message: "Email is already in use" });
+          res.render("register", { err });
         } else {
           pool.query(
             `INSERT INTO customer (firstName, lastName, email, cell, addr1, addr2, city, st, zip, county, password)
@@ -109,9 +113,10 @@ server.post("/register", async (req, res) => {
             ],
             (err, results) => {
               if (err) {
+                console.log(`insert error: `, err);
                 throw err;
               }
-              console.log(results.rows);
+              console.log(`insert results: `, results);
               req.flash(
                 "success_msg",
                 "Registration was successful, please login"
@@ -122,7 +127,6 @@ server.post("/register", async (req, res) => {
         }
       }
     );
-  }
 });
 
 server.post(
