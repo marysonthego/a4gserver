@@ -1,7 +1,6 @@
 require("dotenv").config();
 const express = require("express");
 const server = express();
-//const bodyparser = require("body-parser");
 const { pool } = require("./dbConfig.js");
 const bcrypt = require("bcrypt");
 const session = require("express-session");
@@ -43,16 +42,16 @@ server.get("/customerDashboard", checkNotAuthenticated, async (req, res) => {
   res.send(res, { user: req.user.name });
 });
 
-server.get("/api", async (req, res) => {
+server.get("/api", (req, res) => {
   pool.query(
     `SELECT "custId", "firstName", "lastName", "email", "cell", "addr1", "addr2", "city", "st", "zip", "county", "createDate" FROM "Customer"`,
-    (err, res) => {
+    (err, results) => {
       if (err) {
         console.log(err);
         throw err;
       }
-      console.log(res);
-      res.send(res);
+      console.log(results);
+      res.send(results);
     }
   );
 });
