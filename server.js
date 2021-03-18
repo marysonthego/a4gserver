@@ -28,31 +28,31 @@ server.use(passport.session());
 server.use(flash());
 
 server.get("/", (req, res) => {
-  res.render("home");
+  res.send(res);
 });
 
-server.get("/register", checkAuthenticated, (req, res) => {
-  res.render("register");
+server.get("/register", checkAuthenticated, async (req, res) => {
+  res.send(res);
 });
 
 server.get("/login", checkAuthenticated, (req, res) => {
-  res.render("login");
+  res.send(res);
 });
 
-server.get("/customerdashboard", checkNotAuthenticated, (req, res) => {
-  res.render("customerdashboard", { user: req.user.name });
+server.get("/customerDashboard", checkNotAuthenticated, async (req, res) => {
+  res.send(res, { user: req.user.name });
 });
 
-server.get("/api", (req, res) => {
+server.get("/api", async (req, res) => {
   pool.query(
     `SELECT "custId", "firstName", "lastName", "email", "cell", "addr1", "addr2", "city", "st", "zip", "county", "createDate" FROM "Customer"`,
-    (err, results) => {
+    (err, res) => {
       if (err) {
         console.log(err);
         throw err;
       }
-      console.log(results);
-      res.send(results);
+      console.log(res);
+      res.send(res);
     }
   );
 });
@@ -68,36 +68,38 @@ server.post("/register", async (req, res) => {
     city,
     st,
     zip,
-    county,
-    password,
+    pwd,
   } = req.body;
   // console.log(`req=`, req);
   console.log(`req.body= `, req.body);
-  console.log({firstName, lastName, email, cell, addr1, addr2, city, st, zip, county, password});
+  console.log({firstName, lastName, email, cell, addr1, addr2, city, st, zip, pwd});
 
-  //if (err.length > 0) {
-  //  res.render("register", { err });
-  //} else {
-    let hashedPassword = await bcrypt.hash(password, 10);
+    try {
+      pwd = await bcrypt.hash(pwd, 10);
+    } catch (err) {
+        console.log(`bcrypt error: `, err);
+        throw err;
+    };
+
     pool.query(
-      `SELECT * FROM Customer
-            WHERE email = $1`,
-      [email],
+      `SELECT "email", "cell" FROM "Customer"
+            WHERE "email" = $1 AND "cell" = $2`,
+      [email, cell],
       (err, results) => {
         if (err) {
-          console.log(`select email error: `, err);
+          console.log(`select email and cell error: `, err);
           throw err;
         }
         console.log(`results: `, results);
 
         if (results.length > 0) {
-          err.push({ message: "Email is already in use" });
-          res.render("register", { err });
+          err.push({ message: "Email or Cell is already in use" });
+          res.send({ message });
         } else {
           pool.query(
-            `INSERT INTO customer (firstName, lastName, email, cell, addr1, addr2, city, st, zip, county, password)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                        RETURNING custId, password`,
+            `INSERT INTO "Customer" ("firstName", "lastName", "email", "cell", "addr1", "addr2", "city", "st", "zip", "pwd")
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                        RETURNING "custId", "pwd"`,
             [
               firstName,
               lastName,
@@ -108,8 +110,7 @@ server.post("/register", async (req, res) => {
               city,
               st,
               zip,
-              county,
-              hashedPassword,
+              pwd,
             ],
             (err, results) => {
               if (err) {
@@ -121,7 +122,7 @@ server.post("/register", async (req, res) => {
                 "success_msg",
                 "Registration was successful, please login"
               );
-              res.redirect("/login");
+              res.send(results);
             }
           );
         }
@@ -132,26 +133,17 @@ server.post("/register", async (req, res) => {
 server.post(
   "/login",
   passport.authenticate("local", {
-    successRedirect: "/customerdashboard",
-    failureRedirect: "/login",
+    successRedirect: "http://localhost:3000/customerdashboard",
+    failureRedirect: "http://localhost:3000/login",
     failureFlash: true,
   })
 
   
 );
 
-server.post(
-  "/loginMUI",
-  passport.authenticate("local", {
-    successRedirect: "/customerdashboard",
-    failureRedirect: "/login",
-    failureFlash: true,
-  })
-);
-
 function checkAuthenticated(req, res, next) {
   if (req.isAuthenticated()) {
-    return res.redirect("/customerdashboard");
+    return res.redirect("http://localhost:3000/customerdashboard");
   }
   next();
 }
@@ -160,7 +152,7 @@ function checkNotAuthenticated(req, res, next) {
   if (req.isAuthenticated()) {
     return next();
   }
-  res.redirect("/login");
+  res.redirect("http://localhost:3000/login");
 }
 
 server.listen(PORT, () => {
